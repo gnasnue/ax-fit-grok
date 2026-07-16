@@ -1,9 +1,12 @@
 import type {
+  AiProficiency,
   AxOwner,
   AxStage,
   CompanySize,
   Industry,
+  JobFunction,
   RoleLayer,
+  TenureBand,
 } from "@/types/diagnosis";
 import type { FrictionFactorMeta } from "@/types/friction";
 
@@ -47,6 +50,32 @@ export const ROLE_LABELS: Record<RoleLayer, string> = {
   manager: "중간관리자 (팀장)",
   staff: "실무자",
 };
+
+export const JOB_FUNCTION_OPTIONS: { value: JobFunction; label: string }[] = [
+  { value: "sales", label: "영업" },
+  { value: "marketing", label: "마케팅" },
+  { value: "ops_quality", label: "생산/품질" },
+  { value: "finance", label: "재무·회계" },
+  { value: "hr_admin", label: "인사·총무" },
+  { value: "it_dev", label: "IT/개발" },
+  { value: "cs", label: "고객지원" },
+  { value: "strategy", label: "기획·전략" },
+  { value: "other", label: "기타" },
+];
+
+export const TENURE_OPTIONS: { value: TenureBand; label: string }[] = [
+  { value: "under_3", label: "3년 미만" },
+  { value: "3_7", label: "3~7년" },
+  { value: "7_15", label: "7~15년" },
+  { value: "over_15", label: "15년 이상" },
+];
+
+export const AI_LEVEL_OPTIONS: { value: AiProficiency; label: string }[] = [
+  { value: "rarely", label: "거의 안 씀" },
+  { value: "occasional", label: "가끔 업무에 써봄" },
+  { value: "frequent", label: "업무에 자주 씀" },
+  { value: "leading", label: "팀에서 앞서는 편" },
+];
 
 export const INDUSTRY_OPTIONS: { value: Industry; label: string }[] = [
   { value: "manufacturing", label: "제조" },

@@ -30,6 +30,32 @@ export interface CompanyContext {
   axOwner: AxOwner | null;
 }
 
+/** Respondent context — after role, before questions */
+export type JobFunction =
+  | "sales"
+  | "marketing"
+  | "ops_quality"
+  | "finance"
+  | "hr_admin"
+  | "it_dev"
+  | "cs"
+  | "strategy"
+  | "other";
+
+export type TenureBand = "under_3" | "3_7" | "7_15" | "over_15";
+
+export type AiProficiency =
+  | "rarely"
+  | "occasional"
+  | "frequent"
+  | "leading";
+
+export interface RespondentContext {
+  jobFunction: JobFunction | null;
+  tenure: TenureBand | null;
+  aiLevel: AiProficiency | null;
+}
+
 export type QuestionType = "scale" | "single" | "multi";
 
 export type FrictionFactorId = "F1" | "F2" | "F3" | "F4" | "F5";

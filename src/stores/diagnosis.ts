@@ -7,6 +7,7 @@ import type {
   AnswerValue,
   AnswersByLayer,
   CompanyContext,
+  RespondentContext,
   RoleLayer,
 } from "@/types/diagnosis";
 import type { CalculationResult } from "@/types/report";
@@ -19,8 +20,15 @@ const emptyContext = (): CompanyContext => ({
   axOwner: null,
 });
 
+const emptyRespondent = (): RespondentContext => ({
+  jobFunction: null,
+  tenure: null,
+  aiLevel: null,
+});
+
 interface DiagnosisState {
   context: CompanyContext;
+  respondent: RespondentContext;
   role: RoleLayer | null;
   answers: Record<string, AnswerValue>;
   allLayers: AnswersByLayer;
@@ -37,6 +45,7 @@ interface DiagnosisState {
   demoMeta: DemoScenarioMeta | null;
 
   setContext: (partial: Partial<CompanyContext>) => void;
+  setRespondent: (partial: Partial<RespondentContext>) => void;
   setRole: (role: RoleLayer) => void;
   setAnswer: (questionId: string, value: AnswerValue) => void;
   setQuestionIndex: (index: number) => void;
@@ -48,6 +57,7 @@ interface DiagnosisState {
   computeResult: () => CalculationResult;
   loadDemo: (payload: {
     context: CompanyContext;
+    respondent?: RespondentContext;
     role: RoleLayer;
     answers: Record<string, AnswerValue>;
     allLayers?: AnswersByLayer;
@@ -65,6 +75,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
   persist(
     (set, get) => ({
       context: emptyContext(),
+      respondent: emptyRespondent(),
       role: null,
       answers: {},
       allLayers: {},
@@ -77,6 +88,13 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       setContext: (partial) =>
         set((s) => ({
           context: { ...s.context, ...partial },
+          isDemoSession: false,
+          demoMeta: null,
+        })),
+
+      setRespondent: (partial) =>
+        set((s) => ({
+          respondent: { ...s.respondent, ...partial },
           isDemoSession: false,
           demoMeta: null,
         })),
@@ -107,7 +125,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       setResult: (result) => set({ result }),
 
       computeResult: () => {
-        const { context, role, answers, allLayers } = get();
+        const { context, respondent, role, answers, allLayers } = get();
         if (!role) {
           throw new Error("역할이 선택되지 않았습니다.");
         }
@@ -116,6 +134,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           role,
           answers,
           allLayers,
+          respondent,
         });
         set({ result, isDemoSession: false, demoMeta: null });
         return result;
@@ -124,6 +143,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       loadDemo: (payload) =>
         set({
           context: payload.context,
+          respondent: payload.respondent ?? emptyRespondent(),
           role: payload.role,
           answers: payload.answers,
           allLayers: payload.allLayers ?? {
@@ -168,6 +188,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       resetAll: () =>
         set({
           context: emptyContext(),
+          respondent: emptyRespondent(),
           role: null,
           answers: {},
           allLayers: {},
@@ -182,6 +203,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       name: "ax-fit-diagnosis",
       partialize: (s) => ({
         context: s.context,
+        respondent: s.respondent,
         role: s.role,
         answers: s.answers,
         allLayers: s.allLayers,

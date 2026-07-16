@@ -4,6 +4,7 @@ import type {
   AnswerValue,
   AnswersByLayer,
   CompanyContext,
+  RespondentContext,
   RoleLayer,
 } from "@/types/diagnosis";
 
@@ -14,6 +15,7 @@ interface Body {
   role: RoleLayer;
   answers: Record<string, AnswerValue>;
   allLayers?: AnswersByLayer;
+  respondent?: RespondentContext | null;
 }
 
 /** Same pure rule engine as client store.computeResult() */
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
       role: body.role,
       answers: body.answers,
       allLayers: body.allLayers,
+      respondent: body.respondent ?? null,
     });
 
     return NextResponse.json(result);
