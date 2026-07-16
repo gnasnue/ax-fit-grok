@@ -3,6 +3,7 @@ import {
   computePersonalFriction,
   summarizeLayersUsed,
 } from "@/lib/scoring/friction";
+import { computeGapInsights } from "@/lib/scoring/gaps";
 import { buildPriorities } from "@/lib/scoring/priority";
 import {
   buildExecutiveReport,
@@ -16,6 +17,7 @@ import type {
   AnswerValue,
   AnswersByLayer,
   CompanyContext,
+  RespondentContext,
   RoleLayer,
 } from "@/types/diagnosis";
 import type { CalculationResult } from "@/types/report";
@@ -26,10 +28,12 @@ export interface CalculateInput {
   answers: Record<string, AnswerValue>;
   /** Multi-layer aggregate for org view; defaults to current role only */
   allLayers?: AnswersByLayer;
+  /** Respondent job/tenure/AI level — personal result only */
+  respondent?: RespondentContext | null;
 }
 
 /**
- * Pure rule engine entrypoint (spec §6–9).
+ * Pure rule engine entrypoint (spec §6–9 + respondent/gap extensions).
  * Pages must not invent result copy — only render this output.
  */
 export function calculateResults(input: CalculateInput): CalculationResult {
@@ -44,19 +48,26 @@ export function calculateResults(input: CalculateInput): CalculationResult {
   const personalTop =
     personalRanked.length > 0 ? personalRanked : personalFriction;
 
-  // low friction → top 2 cards only; otherwise up to 4
+  const gapInsights = computeGapInsights(layers);
+  const topGaps = gapInsights.slice(0, 2);
+
   const topScore = frictionMap[0]?.score ?? 0;
   const priorityCount = intensityBand(topScore) === "low" ? 2 : 4;
   const priorities = buildPriorities(frictionMap, priorityCount);
 
-  const personal = buildPersonalResult(input.role, personalTop);
+  const personal = buildPersonalResult(
+    input.role,
+    personalTop,
+    input.respondent ?? null,
+  );
   const executiveReport = buildExecutiveReport(
     input.context,
     frictionMap,
     priorities,
+    topGaps,
   );
-  const oneLiner = buildOrgOneLiner(input.context, frictionMap);
-  const hrGuide = buildHrGuide(frictionMap, priorities);
+  const oneLiner = buildOrgOneLiner(input.context, frictionMap, topGaps);
+  const hrGuide = buildHrGuide(frictionMap, priorities, topGaps);
 
   const layersUsed = summarizeLayersUsed(layers).map((l) => l.layer);
   const layerDisclaimer = buildLayerDisclaimer(layersUsed);
@@ -69,6 +80,7 @@ export function calculateResults(input: CalculateInput): CalculationResult {
       priorities,
       executiveReport,
       hrGuide,
+      gapInsights: topGaps,
       layerDisclaimer,
     },
   };
@@ -79,4 +91,5 @@ export {
   computePersonalFriction,
   buildPriorities,
   summarizeLayersUsed,
+  computeGapInsights,
 };

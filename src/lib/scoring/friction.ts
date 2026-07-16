@@ -1,5 +1,6 @@
 import { FRICTION_FACTORS } from "@/lib/constants";
 import { getQuestionsForLayer } from "@/lib/questions";
+import { computeDirectGapBonuses } from "@/lib/scoring/gaps";
 import {
   clampScore,
   getContextMultipliers,
@@ -150,6 +151,12 @@ export function computeGapBonuses(
     Math.abs(mgrSupport - staffSupport) >= 1.5
   ) {
     bonus.F2 += 10;
+  }
+
+  // 4) Direct employee–org gap items → F2/F3/F4/F1 additives
+  const direct = computeDirectGapBonuses(layers);
+  for (const id of FACTOR_IDS) {
+    bonus[id] += direct[id];
   }
 
   return bonus;

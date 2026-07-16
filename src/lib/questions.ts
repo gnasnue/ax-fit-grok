@@ -312,6 +312,76 @@ export const QUESTIONS: Question[] = [
       { id: "tools", label: "도구 자체", scores: { F5: 45 } },
     ],
   },
+
+  // ── Gap probes (직원–조직 갭, +1~2 per layer) ───────────────
+  {
+    id: "EG1",
+    layer: "executive",
+    text: "교육·도구 도입 대비, 현장 업무 방식이 실제로 바뀌고 있다고 보는가?",
+    type: "scale",
+    reverse: false,
+    factors: ["F4", "F3"],
+  },
+  {
+    id: "EG2",
+    layer: "executive",
+    text: "중간관리자들이 회사의 AX 방향을 실행 가능한 수준으로 이해하고 있다고 보는가?",
+    type: "scale",
+    reverse: false,
+    factors: ["F2", "F3"],
+  },
+  {
+    id: "MG1",
+    layer: "manager",
+    text: "윗선이 기대하는 AX 속도와, 팀이 실제로 따라갈 수 있는 속도에 차이가 있는가?",
+    type: "scale",
+    reverse: true, // 차이 큼↑ = 갭 마찰↑
+    factors: ["F2", "F3"],
+  },
+  {
+    id: "MG2",
+    layer: "manager",
+    text: "“AI 쓰라”는 메시지는 오는데, 평가나 리소스 지원은 그대로인 상황인가?",
+    type: "scale",
+    reverse: true,
+    factors: ["F1", "F2", "F5"],
+  },
+  {
+    id: "SG1",
+    layer: "staff",
+    text: "회사가 AI/AX를 추진하는 속도와, 실제 내 업무가 바뀌는 속도 중 어느 쪽이 더 빠른가?",
+    type: "single",
+    options: [
+      {
+        id: "company_much_faster",
+        label: "회사 쪽이 훨씬 빠름",
+        scores: { F3: 70, F4: 55 },
+      },
+      {
+        id: "company_faster",
+        label: "회사 쪽이 조금 빠름",
+        scores: { F3: 50, F4: 40 },
+      },
+      {
+        id: "similar",
+        label: "비슷",
+        scores: { F3: 20, F4: 20 },
+      },
+      {
+        id: "work_faster",
+        label: "내 업무 쪽이 더 빠름",
+        scores: { F3: 25, F4: 15 },
+      },
+    ],
+  },
+  {
+    id: "SG2",
+    layer: "staff",
+    text: "회사는 AI 활용을 장려한다고 하지만, 실제로 평가·업무 배분·지원이 따라온다고 느끼는가?",
+    type: "scale",
+    reverse: false, // 따라온다↑ = 마찰↓
+    factors: ["F1", "F2"],
+  },
 ];
 
 export function getQuestionsForLayer(layer: RoleLayer): Question[] {

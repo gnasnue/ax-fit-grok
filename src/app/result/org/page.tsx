@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DemoBanner } from "@/components/result/DemoBanner";
 import { ExecutiveReportView } from "@/components/result/ExecutiveReport";
 import { FrictionMap } from "@/components/result/FrictionMap";
+import { GapInsightsPanel } from "@/components/result/GapInsights";
 import { HrGuidePanel } from "@/components/result/HrGuidePanel";
 import { PriorityCards } from "@/components/result/PriorityCards";
 import { PageShell } from "@/components/layout/PageShell";
@@ -59,6 +60,7 @@ export default function OrgResultPage() {
         ) : null}
       </header>
 
+      <GapInsightsPanel items={org.gapInsights} />
       <FrictionMap factors={org.frictionMap} />
       <PriorityCards items={org.priorities} />
       <ExecutiveReportView

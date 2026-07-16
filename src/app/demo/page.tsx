@@ -23,6 +23,7 @@ export default function DemoPage() {
     setBlurb(payload.meta.blurb);
     loadDemo({
       context: payload.context,
+      respondent: payload.respondent,
       role: payload.role,
       answers: payload.answers,
       allLayers: payload.allLayers,

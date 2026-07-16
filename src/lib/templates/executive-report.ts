@@ -12,7 +12,12 @@ import type {
   RoleLayer,
 } from "@/types/diagnosis";
 import type { FrictionScore } from "@/types/friction";
-import type { ExecutiveReport, HrGuide, PriorityCard } from "@/types/report";
+import type {
+  ExecutiveReport,
+  GapInsight,
+  HrGuide,
+  PriorityCard,
+} from "@/types/report";
 
 function labelAxStage(stage: CompanyContext["axStage"]): string {
   return (
@@ -91,9 +96,10 @@ const PROBLEM_LINES: Record<
   },
 };
 
+/** Gap-aware recommendation — redesign structures that close employee–org gaps */
 const RECOMMENDATION: Record<"high" | "mid" | "low", string> = {
-  high: "교육을 추가하기보다, 평가·역할·중간관리자 루틴·업무 적용 파이프라인 등 구조를 먼저 재설계하는 것이 효과적입니다.",
-  mid: "교육 확대와 병행하되, 상위 마찰 영역 1~2개에 대해 작은 파일럿으로 구조를 먼저 손보는 편이 리스크가 낮습니다.",
+  high: "교육을 더 하기보다, 추진 속도와 현장 체감 사이의 갭을 줄이는 구조 재설계(평가·역할·중간관리자 루틴·적용 파이프라인)가 우선입니다.",
+  mid: "교육 확대와 병행하되, 직원–조직 갭이 큰 영역 1~2개에 대해 작은 파일럿으로 구조를 먼저 손보는 편이 리스크가 낮습니다.",
   low: "전반 마찰은 낮은 편입니다. 현 상태를 유지하면서 상위 1개 영역에 가벼운 실험(2~4주)을 걸어 성과를 수치로 남기기를 권합니다.",
 };
 
@@ -123,11 +129,13 @@ function formatTopPair(friction: FrictionScore[]): {
 }
 
 /**
- * Spec §7.1 — one-liner reflects ax_stage + top friction + size + industry (once)
+ * Spec §7.1 — one-liner reflects ax_stage + top friction + size + industry,
+ * and surfaces employee–org gap when strong signals exist.
  */
 export function buildOrgOneLiner(
   context: CompanyContext,
   friction: FrictionScore[],
+  topGaps: GapInsight[] = [],
 ): string {
   const size = labelSize(context.size);
   const stage = labelAxStage(context.axStage);
@@ -141,18 +149,44 @@ export function buildOrgOneLiner(
   const eul = hasBatchim(lastName) ? "을" : "를";
   const iga = iGa(lastName);
 
-  // Trailing context: prefer industry pattern once; else size
-  const tail = industryCue ?? `${size} 규모 중견기업에서 자주 관찰되는 패턴입니다.`;
-  const meta = industryCue
-    ? `(${stage} · ${size})`
-    : `(${stage} · ${size})`;
+  const strongGap = topGaps.find((g) => g.severity >= 55);
+  const gapSentence = strongGap
+    ? strongGap.severity >= 65
+      ? "회사의 추진 속도와 현장 체감 속도 사이에 뚜렷한 간극이 있습니다."
+      : "회사 추진과 현장 체감 사이에 간극이 관찰됩니다."
+    : null;
+
+  const tail =
+    industryCue ?? `${size} 규모 중견기업에서 자주 관찰되는 패턴입니다.`;
+  const meta = `(${stage} · ${size})`;
 
   if (band === "low") {
-    return `현재 AX 진행 단계(${stage})에서 전반 마찰은 낮은 편입니다. 상대적으로 ${phrase} 쪽을 가볍게 손보면 실행 안정성을 더 높일 수 있습니다. ${industryCue ? tail : `(${size})`}`;
+    const base = `현재 AX 진행 단계(${stage})에서 전반 마찰은 낮은 편입니다. 상대적으로 ${phrase} 쪽을 가볍게 손보면 실행 안정성을 더 높일 수 있습니다.`;
+    return gapSentence
+      ? `${base} ${gapSentence} ${industryCue ? tail : `(${size})`}`
+      : `${base} ${industryCue ? tail : `(${size})`}`;
   }
 
   if (band === "mid") {
-    return `${stage} 단계에서 ${phrase} 관련 구조 이슈가 중간 수준으로 관찰됩니다. 교육 확대보다 해당 영역의 작은 파일럿을 권합니다. ${industryCue ? tail : meta}`;
+    const base = `${stage} 단계에서 ${phrase} 관련 구조 이슈가 중간 수준으로 관찰됩니다.`;
+    if (gapSentence) {
+      return `${base} ${gapSentence} 교육 확대보다 갭을 줄이는 작은 파일럿을 권합니다. ${industryCue ? tail : meta}`;
+    }
+    return `${base} 교육 확대보다 해당 영역의 작은 파일럿을 권합니다. ${industryCue ? tail : meta}`;
+  }
+
+  // High band — gap-first framing when available
+  if (gapSentence) {
+    const highWithGap: Record<AxStage, string> = {
+      not_started: `AX 초기 국면에서 ${phrase}${eul} 중심으로 구조적 장벽이 보입니다. ${gapSentence} ${industryCue ? tail : meta}`,
+      education_tools: `교육과 도구 도입은 진행 중이나, ${phrase} 쪽 구조 마찰이 큽니다. ${gapSentence} ${tail}`,
+      partial_apply: `일부 현업 적용 단계이나 ${phrase}${iga} 확산 병목입니다. ${gapSentence} ${industryCue ? tail : meta}`,
+      enterprise_rollout: `전사 확산 시도 중에도 ${phrase} 등 구조 이슈가 남습니다. ${gapSentence} ${industryCue ? tail : `(${size})`}`,
+    };
+    if (context.axStage && highWithGap[context.axStage]) {
+      return highWithGap[context.axStage];
+    }
+    return `진단 결과 ${phrase} 쪽 구조적 장벽이 두드러집니다. ${gapSentence} ${industryCue ? tail : meta}`;
   }
 
   const highByStage: Record<AxStage, string> = {
@@ -181,10 +215,31 @@ export function buildExecutiveReport(
   context: CompanyContext,
   friction: FrictionScore[],
   priorities: PriorityCard[],
+  topGaps: GapInsight[] = [],
 ): ExecutiveReport {
   const top3 = friction.slice(0, 3);
   const topScore = friction[0]?.score ?? 0;
   const band = intensityBand(topScore);
+
+  // Prefer explicit gap problem lines (TOP 2), then fill with friction problems
+  const gapProblems = topGaps
+    .filter((g) => g.severity >= 40)
+    .slice(0, 2)
+    .map((g) => g.problemLine);
+
+  const frictionProblems = top3.map((f) => {
+    const line = PROBLEM_LINES[f.id][intensityBand(f.score)];
+    return `${line} (진단 점수 ${f.score}/100)`;
+  });
+
+  // Dedupe loosely by first 20 chars, keep gap lines first
+  const structuralProblems: string[] = [];
+  for (const p of [...gapProblems, ...frictionProblems]) {
+    if (structuralProblems.length >= 3) break;
+    const key = p.slice(0, 24);
+    if (structuralProblems.some((s) => s.startsWith(key.slice(0, 16)))) continue;
+    structuralProblems.push(p);
+  }
 
   const next30Days = priorities.slice(0, 3).flatMap((p, i) => {
     const actions = getActionsForFriction(p.frictionId, "executive");
@@ -196,11 +251,8 @@ export function buildExecutiveReport(
   });
 
   return {
-    headline: buildOrgOneLiner(context, friction),
-    structuralProblems: top3.map((f) => {
-      const line = PROBLEM_LINES[f.id][intensityBand(f.score)];
-      return `${line} (진단 점수 ${f.score}/100)`;
-    }),
+    headline: buildOrgOneLiner(context, friction, topGaps),
+    structuralProblems,
     recommendation: RECOMMENDATION[band],
     roleSplit: { ...ROLE_SPLIT },
     next30Days,
@@ -210,27 +262,41 @@ export function buildExecutiveReport(
 export function buildHrGuide(
   friction: FrictionScore[],
   priorities: PriorityCard[],
+  topGaps: GapInsight[] = [],
 ): HrGuide {
   const top = friction[0];
   const topName = top?.name ?? "구조적 장벽";
   const band = intensityBand(top?.score ?? 0);
   const p0 = priorities[0];
   const n = Math.min(2, priorities.length);
+  const hasStrongGap = topGaps.some((g) => g.severity >= 55);
 
   const eulReul = hasBatchim(topName) ? "을" : "를";
   const messageByBand: Record<"high" | "mid" | "low", string> = {
-    high: `지금 문제는 의지 부족이 아니라 「${topName}」 쪽 설계 이슈입니다. 교육 확대 전에 「업무 재설계」 우선순위 ${n}개를 이번 분기 파일럿으로 합의해 주세요.`,
-    mid: `「${topName}」 관련 구조 이슈가 중간 수준입니다. 교육과 병행하되, 「업무 재설계」 우선순위 ${n}개 중 1~2개만 파일럿으로 확정하는 편이 설득력 있습니다.`,
+    high: hasStrongGap
+      ? `지금 문제는 의지 부족이 아니라 「${topName}」과 직원–조직 갭 쪽 설계 이슈입니다. 교육 확대 전에 갭을 줄이는 「구조 재설계」 우선순위 ${n}개를 이번 분기 파일럿으로 합의해 주세요.`
+      : `지금 문제는 의지 부족이 아니라 「${topName}」 쪽 설계 이슈입니다. 교육 확대 전에 「업무 재설계」 우선순위 ${n}개를 이번 분기 파일럿으로 합의해 주세요.`,
+    mid: hasStrongGap
+      ? `「${topName}」 관련 구조 이슈가 중간 수준이고, 직원–조직 갭 신호도 있습니다. 교육과 병행하되 갭 축소 파일럿 1~2개만 확정하는 편이 설득력 있습니다.`
+      : `「${topName}」 관련 구조 이슈가 중간 수준입니다. 교육과 병행하되, 「업무 재설계」 우선순위 ${n}개 중 1~2개만 파일럿으로 확정하는 편이 설득력 있습니다.`,
     low: `전반 마찰은 낮은 편입니다. 「${topName}」${eulReul} 중심으로 2~4주 가벼운 실험 1건만 합의해도 경영진 보고용 근거를 만들 수 있습니다.`,
   };
 
+  const discussionOrder = hasStrongGap
+    ? [
+        "한 줄 진단과 직원–조직 갭 TOP으로 ‘시스템 문제’ 프레이밍을 공유한다",
+        "갭이 큰 영역 상위 2개를 이번 분기 구조 재설계 파일럿으로 확정한다",
+        "역할 분담(경영진/HR/IT/현업)과 30일 산출물·확인 방법을 합의한다",
+      ]
+    : [
+        "한 줄 진단과 Friction Map으로 ‘시스템 문제’ 프레이밍을 공유한다",
+        "「업무 재설계」 우선순위 상위 2개만 이번 분기 파일럿으로 확정한다",
+        "역할 분담(경영진/HR/IT/현업)과 30일 산출물·확인 방법을 합의한다",
+      ];
+
   return {
     messageToExec: messageByBand[band],
-    discussionOrder: [
-      "한 줄 진단과 Friction Map으로 ‘시스템 문제’ 프레이밍을 공유한다",
-      "「업무 재설계」 우선순위 상위 2개만 이번 분기 파일럿으로 확정한다",
-      "역할 분담(경영진/HR/IT/현업)과 30일 산출물·확인 방법을 합의한다",
-    ],
+    discussionOrder,
     pilotSuggestion: p0
       ? `가장 먼저: ${p0.title} — ${p0.pilotForm}`
       : "상위 마찰 요인 1개에 대한 2주 파일럿을 제안하세요.",

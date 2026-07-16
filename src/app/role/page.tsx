@@ -82,9 +82,9 @@ export default function RolePage() {
             <Button
               className="h-11 w-full sm:h-9 sm:w-auto"
               disabled={!role}
-              onClick={() => router.push("/diagnose")}
+              onClick={() => router.push("/respondent")}
             >
-              진단 시작
+              다음
             </Button>
           </div>
         </CardContent>
