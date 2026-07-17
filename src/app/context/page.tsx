@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AX_OWNER_OPTIONS,
@@ -7,7 +8,12 @@ import {
   INDUSTRY_OPTIONS,
   SIZE_OPTIONS,
 } from "@/lib/constants";
+import {
+  DEMO_EXIT_STORAGE_KEY,
+  FLASH_AFTER_DEMO_EXIT,
+} from "@/lib/templates/layer-notices";
 import { useDiagnosisStore } from "@/stores/diagnosis";
+import { FunnelStepIndicator } from "@/components/layout/FunnelStepIndicator";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +42,19 @@ import type {
 export default function ContextPage() {
   const router = useRouter();
   const { context, setContext } = useDiagnosisStore();
+  const [flash, setFlash] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const msg = sessionStorage.getItem(DEMO_EXIT_STORAGE_KEY);
+      if (msg) {
+        setFlash(msg);
+        sessionStorage.removeItem(DEMO_EXIT_STORAGE_KEY);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+  }, []);
 
   const complete =
     context.industry &&
@@ -44,7 +63,18 @@ export default function ContextPage() {
     context.axOwner;
 
   return (
-    <PageShell width="sm">
+    <PageShell width="sm" className="space-y-4 sm:space-y-5">
+      <FunnelStepIndicator current="context" />
+
+      {flash ? (
+        <p
+          role="status"
+          className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-foreground sm:text-sm"
+        >
+          {flash || FLASH_AFTER_DEMO_EXIT}
+        </p>
+      ) : null}
+
       <Card className="overflow-hidden">
         <CardHeader className="space-y-1.5 px-4 pt-5 sm:px-6 sm:pt-6">
           <CardTitle className="text-lg sm:text-xl">

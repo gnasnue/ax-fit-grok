@@ -43,6 +43,12 @@ interface DiagnosisState {
   /** True when session was loaded from /demo */
   isDemoSession: boolean;
   demoMeta: DemoScenarioMeta | null;
+  /**
+   * User accepted the pre-question briefing on /diagnose.
+   * Reset when role changes or full reset. Not persisted across reloads
+   * so a fresh diagnose entry can re-brief if no answers yet.
+   */
+  diagnosisBriefingAccepted: boolean;
 
   setContext: (partial: Partial<CompanyContext>) => void;
   setRespondent: (partial: Partial<RespondentContext>) => void;
@@ -50,6 +56,7 @@ interface DiagnosisState {
   setAnswer: (questionId: string, value: AnswerValue) => void;
   setQuestionIndex: (index: number) => void;
   setResult: (result: CalculationResult | null) => void;
+  acceptDiagnosisBriefing: () => void;
   /**
    * Run pure rule engine (lib/scoring + lib/templates).
    * Prefer this for client-side consistency; API mirrors the same function.
@@ -65,6 +72,11 @@ interface DiagnosisState {
     meta?: DemoScenarioMeta;
   }) => void;
   clearDemoSession: () => void;
+  /**
+   * Leave demo for real diagnosis: wipe session state.
+   * Caller navigates to /context and may show a flash message.
+   */
+  startRealDiagnosis: () => void;
   togglePersonalAction: (actionId: string) => void;
   setPersonalActionDone: (actionId: string, done: boolean) => void;
   resetAnswers: () => void;
@@ -84,6 +96,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       personalActionChecks: {},
       isDemoSession: false,
       demoMeta: null,
+      diagnosisBriefingAccepted: false,
 
       setContext: (partial) =>
         set((s) => ({
@@ -105,8 +118,9 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           answers: {},
           questionIndex: 0,
           result: null,
-          // New role → new action set; clear personal checklist
+          // New role → new action set; clear personal checklist + re-brief
           personalActionChecks: {},
+          diagnosisBriefingAccepted: false,
           isDemoSession: false,
           demoMeta: null,
         }),
@@ -123,6 +137,9 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       setQuestionIndex: (index) => set({ questionIndex: index }),
 
       setResult: (result) => set({ result }),
+
+      acceptDiagnosisBriefing: () =>
+        set({ diagnosisBriefingAccepted: true }),
 
       computeResult: () => {
         const { context, respondent, role, answers, allLayers } = get();
@@ -152,12 +169,28 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           result: payload.result,
           questionIndex: 0,
           personalActionChecks: {},
+          diagnosisBriefingAccepted: true,
           isDemoSession: true,
           demoMeta: payload.meta ?? null,
         }),
 
       clearDemoSession: () =>
         set({ isDemoSession: false, demoMeta: null }),
+
+      startRealDiagnosis: () =>
+        set({
+          context: emptyContext(),
+          respondent: emptyRespondent(),
+          role: null,
+          answers: {},
+          allLayers: {},
+          result: null,
+          questionIndex: 0,
+          personalActionChecks: {},
+          diagnosisBriefingAccepted: false,
+          isDemoSession: false,
+          demoMeta: null,
+        }),
 
       togglePersonalAction: (actionId) =>
         set((s) => ({
@@ -181,6 +214,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           questionIndex: 0,
           result: null,
           personalActionChecks: {},
+          diagnosisBriefingAccepted: false,
           isDemoSession: false,
           demoMeta: null,
         }),
@@ -195,6 +229,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           result: null,
           questionIndex: 0,
           personalActionChecks: {},
+          diagnosisBriefingAccepted: false,
           isDemoSession: false,
           demoMeta: null,
         }),
@@ -211,6 +246,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
         personalActionChecks: s.personalActionChecks,
         isDemoSession: s.isDemoSession,
         demoMeta: s.demoMeta,
+        // briefing not persisted — empty answers → show briefing again
       }),
     },
   ),

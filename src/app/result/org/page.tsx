@@ -8,6 +8,7 @@ import { ExecutiveReportView } from "@/components/result/ExecutiveReport";
 import { FrictionMapEnhanced } from "@/components/result/FrictionMapEnhanced";
 import { GapInsightsPanel } from "@/components/result/GapInsights";
 import { HrGuidePanel } from "@/components/result/HrGuidePanel";
+import { LayerCountBadge } from "@/components/result/LayerCountBadge";
 import { MoreSections } from "@/components/result/MoreSections";
 import { PriorityCards } from "@/components/result/PriorityCards";
 import { PageShell } from "@/components/layout/PageShell";
@@ -102,15 +103,7 @@ export default function OrgResultPage() {
           <p className="text-xs font-medium text-muted-foreground sm:text-sm">
             조직 결과
           </p>
-          {isSingleLayer ? (
-            <span className="rounded-full border border-amber-300/80 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-              1개 레이어 기준
-            </span>
-          ) : (
-            <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-              {layerCount}개 레이어 반영
-            </span>
-          )}
+          {!isDemo ? <LayerCountBadge layerCount={layerCount} /> : null}
         </div>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
           한 줄 진단

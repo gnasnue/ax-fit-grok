@@ -5,6 +5,7 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { ROLE_PAGE_NOTICES } from "@/lib/templates/layer-notices";
 import { useDiagnosisStore } from "@/stores/diagnosis";
 import type { RoleLayer } from "@/types/diagnosis";
+import { FunnelStepIndicator } from "@/components/layout/FunnelStepIndicator";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +41,8 @@ export default function RolePage() {
   }
 
   return (
-    <PageShell width="md">
+    <PageShell width="md" className="space-y-4 sm:space-y-5">
+      <FunnelStepIndicator current="role" />
       <Card className="overflow-hidden">
         <CardHeader className="px-4 pt-5 sm:px-6 sm:pt-6">
           <CardTitle className="text-lg sm:text-xl">

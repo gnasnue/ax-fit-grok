@@ -58,6 +58,10 @@ export default function DemoPage() {
       <p className="mt-2 max-w-sm text-xs text-muted-foreground">
         개인 결과(팀장) → 조직 결과 순으로 확인할 수 있습니다.
       </p>
+      <p className="mt-3 max-w-sm text-xs font-medium leading-relaxed text-foreground/80">
+        이 결과는 3개 레이어가 모두 채워진 샘플입니다. 직접 진단과 품질이 다를 수
+        있습니다.
+      </p>
       <p className="mt-6 text-xs text-muted-foreground animate-pulse">
         개인 결과로 이동 중…
       </p>

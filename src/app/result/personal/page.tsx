@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { DemoBanner } from "@/components/result/DemoBanner";
+import { LayerCountBadge } from "@/components/result/LayerCountBadge";
 import { PersonalSummary } from "@/components/result/PersonalSummary";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -45,9 +46,12 @@ export default function PersonalResultPage() {
       <DemoBanner variant="personal" />
 
       <div>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-          개인 결과
-        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            개인 결과
+          </h1>
+          {!isDemo ? <LayerCountBadge layerCount={layerCount} /> : null}
+        </div>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
           {isDemo
             ? "데모 참여자(중간관리자) 응답 기준 요약입니다. 이어서 조직 전체 결과를 확인하세요."
@@ -56,11 +60,6 @@ export default function PersonalResultPage() {
         {isSingleLayer && !isDemo ? (
           <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50/60 px-3 py-2 text-xs leading-relaxed text-amber-950/90 sm:text-sm dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100/90">
             {PERSONAL_SINGLE_LAYER_BADGE}
-          </p>
-        ) : null}
-        {!isSingleLayer ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            현재 {layerCount}개 레이어 응답이 조직 결과에 반영됩니다.
           </p>
         ) : null}
       </div>
