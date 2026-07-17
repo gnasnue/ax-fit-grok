@@ -70,14 +70,58 @@ export interface GapInsight {
   problemLine: string;
 }
 
+/** Layer-vs-layer perception gap for Friction Map mini comparison */
+export interface RolePerceptionGap {
+  id: string;
+  /** Related friction factor for highlight linking */
+  frictionId: FrictionFactorId;
+  /** Short board-ready comparison sentence */
+  statement: string;
+  /** Per-layer friction means 0–100 (null = no data for layer) */
+  layerScores: {
+    executive: number | null;
+    manager: number | null;
+    staff: number | null;
+  };
+}
+
+export type ActionAudience = "hr" | "executive";
+
+/**
+ * HR dashboard action card — derived from scoring + templates.
+ * Never hardcode copy on result pages.
+ */
+export interface OrgActionCard {
+  id: string;
+  priority: "P1" | "P2";
+  audience: ActionAudience;
+  frictionId: FrictionFactorId;
+  /** e.g. "F1 · 평가·보상 불일치" */
+  frictionLabel: string;
+  title: string;
+  /** One-line diagnostic rationale */
+  whyNow: string;
+  who: string;
+  byWhen: string;
+  successMetrics: string[];
+  /** Immediate first step the owner can take today */
+  nextAction: string;
+}
+
 export interface OrgResult {
   oneLiner: string;
   frictionMap: FrictionScore[];
   priorities: PriorityCard[];
+  /** HR + executive action cards for dashboard columns */
+  actionCards: OrgActionCard[];
+  /** Role-layer perception differences for Friction Map */
+  rolePerceptionGaps: RolePerceptionGap[];
   executiveReport: ExecutiveReport;
   hrGuide: HrGuide;
   /** TOP gap areas (typically 2) — empty if no strong gap signal */
   gapInsights: GapInsight[];
+  /** Number of role layers that contributed answers (1–3) */
+  layerCount: number;
   /**
    * Present when only one role layer has responses.
    * Null when 2+ layers contributed (fuller org picture).

@@ -9,10 +9,15 @@ import {
 
 interface GapInsightsProps {
   items: GapInsight[];
+  /** Soften presentation when only one role layer answered */
+  singleLayer?: boolean;
 }
 
 /** Renders TOP employee–org gap problem lines (copy from scoring/templates only) */
-export function GapInsightsPanel({ items }: GapInsightsProps) {
+export function GapInsightsPanel({
+  items,
+  singleLayer = false,
+}: GapInsightsProps) {
   if (!items.length) return null;
 
   return (
@@ -22,7 +27,9 @@ export function GapInsightsPanel({ items }: GapInsightsProps) {
           직원–조직 갭 TOP {Math.min(2, items.length)}
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm">
-          추진 속도와 현장 체감 사이의 간극 — 교육 확대보다 구조 재설계 단서
+          {singleLayer
+            ? "단일 레이어 신호 — 참고용이며, 추가 역할 응답 후 확정하는 것이 안전합니다"
+            : "추진 속도와 현장 체감 사이의 간극 — 교육 확대보다 구조 재설계 단서"}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 pb-5 sm:px-6 sm:pb-6">
@@ -36,7 +43,11 @@ export function GapInsightsPanel({ items }: GapInsightsProps) {
                 {i + 1}. {g.area}
               </p>
               <p className="mt-1 text-sm leading-relaxed break-keep">
-                {g.problemLine}
+                {singleLayer
+                  ? g.problemLine
+                      .replace(/뚜렷한 간극이 있습니다/g, "간극이 관찰됩니다")
+                      .replace(/있습니다\.$/g, "보입니다.")
+                  : g.problemLine}
               </p>
             </li>
           ))}

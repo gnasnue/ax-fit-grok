@@ -22,10 +22,11 @@ export function PriorityCards({ items }: PriorityCardsProps) {
     <section className="min-w-0 space-y-3 sm:space-y-4">
       <div className="min-w-0">
         <h2 className="text-lg font-semibold sm:text-xl">
-          「업무 재설계」 우선순위
+          분기 파일럿 후보
         </h2>
         <p className="text-xs text-muted-foreground sm:text-sm">
-          교육을 더하기 전에 구조를 손볼 영역입니다.
+          「업무 재설계」 우선 영역 · 교육을 더하기 전에 구조를 손볼 파일럿
+          후보입니다. (위 액션 카드 = 단기 실행 / 여기 = 분기 단위 설계)
         </p>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ROLE_LABELS } from "@/lib/constants";
+import { ROLE_PAGE_NOTICES } from "@/lib/templates/layer-notices";
 import { useDiagnosisStore } from "@/stores/diagnosis";
 import type { RoleLayer } from "@/types/diagnosis";
 import { PageShell } from "@/components/layout/PageShell";
@@ -50,6 +51,13 @@ export default function RolePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2.5 px-4 pb-5 sm:gap-3 sm:px-6 sm:pb-6">
+          <div className="rounded-lg border border-dashed bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            {ROLE_PAGE_NOTICES.map((line, i) => (
+              <p key={line} className={i > 0 ? "mt-1" : undefined}>
+                {line}
+              </p>
+            ))}
+          </div>
           {ROLES.map((r) => (
             <button
               key={r}
