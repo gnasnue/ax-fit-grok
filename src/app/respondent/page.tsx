@@ -12,6 +12,7 @@ import type {
   JobFunction,
   TenureBand,
 } from "@/types/diagnosis";
+import { FunnelStepIndicator } from "@/components/layout/FunnelStepIndicator";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,7 +53,8 @@ export default function RespondentPage() {
     respondent.jobFunction && respondent.tenure && respondent.aiLevel;
 
   return (
-    <PageShell width="sm">
+    <PageShell width="sm" className="space-y-4 sm:space-y-5">
+      <FunnelStepIndicator current="respondent" />
       <Card className="overflow-hidden">
         <CardHeader className="space-y-1.5 px-4 pt-5 sm:px-6 sm:pt-6">
           <CardTitle className="text-lg sm:text-xl">
@@ -143,7 +145,7 @@ export default function RespondentPage() {
               disabled={!complete}
               onClick={() => router.push("/diagnose")}
             >
-              진단 문항으로
+              다음: 진단 안내
             </Button>
           </div>
         </CardContent>

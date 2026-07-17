@@ -5,6 +5,7 @@ import {
 } from "@/lib/scoring/friction";
 import { computeGapInsights } from "@/lib/scoring/gaps";
 import { buildPriorities } from "@/lib/scoring/priority";
+import { computeRolePerceptionGaps } from "@/lib/scoring/role-perception";
 import {
   buildExecutiveReport,
   buildHrGuide,
@@ -12,6 +13,7 @@ import {
   buildOrgOneLiner,
   intensityBand,
 } from "@/lib/templates/executive-report";
+import { buildOrgActionCards } from "@/lib/templates/org-actions";
 import { buildPersonalResult } from "@/lib/templates/personal-result";
 import type {
   AnswerValue,
@@ -54,6 +56,13 @@ export function calculateResults(input: CalculateInput): CalculationResult {
   const topScore = frictionMap[0]?.score ?? 0;
   const priorityCount = intensityBand(topScore) === "low" ? 2 : 4;
   const priorities = buildPriorities(frictionMap, priorityCount);
+  const actionCards = buildOrgActionCards(frictionMap, topGaps);
+  const rolePerceptionGaps = computeRolePerceptionGaps(layers, frictionMap);
+
+  const layersUsed = summarizeLayersUsed(layers).map((l) => l.layer);
+  const layerCount = layersUsed.length;
+  const singleLayer = layerCount <= 1;
+  const layerDisclaimer = buildLayerDisclaimer(layersUsed);
 
   const personal = buildPersonalResult(
     input.role,
@@ -65,12 +74,12 @@ export function calculateResults(input: CalculateInput): CalculationResult {
     frictionMap,
     priorities,
     topGaps,
+    { singleLayer },
   );
-  const oneLiner = buildOrgOneLiner(input.context, frictionMap, topGaps);
+  const oneLiner = buildOrgOneLiner(input.context, frictionMap, topGaps, {
+    singleLayer,
+  });
   const hrGuide = buildHrGuide(frictionMap, priorities, topGaps);
-
-  const layersUsed = summarizeLayersUsed(layers).map((l) => l.layer);
-  const layerDisclaimer = buildLayerDisclaimer(layersUsed);
 
   return {
     personal,
@@ -78,9 +87,12 @@ export function calculateResults(input: CalculateInput): CalculationResult {
       oneLiner,
       frictionMap,
       priorities,
+      actionCards,
+      rolePerceptionGaps,
       executiveReport,
       hrGuide,
       gapInsights: topGaps,
+      layerCount,
       layerDisclaimer,
     },
   };
@@ -92,4 +104,6 @@ export {
   buildPriorities,
   summarizeLayersUsed,
   computeGapInsights,
+  computeRolePerceptionGaps,
+  buildOrgActionCards,
 };

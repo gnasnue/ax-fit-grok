@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { ROLE_LABELS } from "@/lib/constants";
+import { ROLE_PAGE_NOTICES } from "@/lib/templates/layer-notices";
 import { useDiagnosisStore } from "@/stores/diagnosis";
 import type { RoleLayer } from "@/types/diagnosis";
+import { FunnelStepIndicator } from "@/components/layout/FunnelStepIndicator";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +41,8 @@ export default function RolePage() {
   }
 
   return (
-    <PageShell width="md">
+    <PageShell width="md" className="space-y-4 sm:space-y-5">
+      <FunnelStepIndicator current="role" />
       <Card className="overflow-hidden">
         <CardHeader className="px-4 pt-5 sm:px-6 sm:pt-6">
           <CardTitle className="text-lg sm:text-xl">
@@ -50,6 +53,13 @@ export default function RolePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2.5 px-4 pb-5 sm:gap-3 sm:px-6 sm:pb-6">
+          <div className="rounded-lg border border-dashed bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            {ROLE_PAGE_NOTICES.map((line, i) => (
+              <p key={line} className={i > 0 ? "mt-1" : undefined}>
+                {line}
+              </p>
+            ))}
+          </div>
           {ROLES.map((r) => (
             <button
               key={r}

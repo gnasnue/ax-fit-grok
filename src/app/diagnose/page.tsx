@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DiagnosisBriefing } from "@/components/diagnose/DiagnosisBriefing";
 import { QuestionCard } from "@/components/diagnose/QuestionCard";
 import { ProgressBar } from "@/components/diagnose/ProgressBar";
+import { FunnelStepIndicator } from "@/components/layout/FunnelStepIndicator";
 import { PageShell } from "@/components/layout/PageShell";
 import { ROLE_LABELS } from "@/lib/constants";
 import { getQuestionsForLayer } from "@/lib/questions";
@@ -19,6 +21,8 @@ export default function DiagnosePage() {
     questionIndex,
     setQuestionIndex,
     computeResult,
+    diagnosisBriefingAccepted,
+    acceptDiagnosisBriefing,
   } = useDiagnosisStore();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +42,27 @@ export default function DiagnosePage() {
         >
           역할 선택
         </Button>
+      </PageShell>
+    );
+  }
+
+  const hasAnswers = Object.keys(answers).length > 0;
+  // Show briefing until accepted; skip if mid-session with answers already
+  const showBriefing = !diagnosisBriefingAccepted && !hasAnswers;
+
+  if (showBriefing) {
+    return (
+      <PageShell width="md" className="space-y-4 sm:space-y-5">
+        <FunnelStepIndicator current="diagnose" />
+        <DiagnosisBriefing
+          questionCount={questions.length}
+          roleLabel={ROLE_LABELS[role]}
+          onStart={() => {
+            acceptDiagnosisBriefing();
+            setQuestionIndex(0);
+          }}
+          onBack={() => router.push("/respondent")}
+        />
       </PageShell>
     );
   }
@@ -70,9 +95,12 @@ export default function DiagnosePage() {
 
   return (
     <PageShell width="md" className="space-y-4 sm:space-y-6">
+      {/* Funnel step above item progress */}
+      <FunnelStepIndicator current="diagnose" />
+
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground sm:text-sm">
-          {ROLE_LABELS[role]}
+          {ROLE_LABELS[role]} · 문항 진행
         </p>
         <ProgressBar current={questionIndex + 1} total={questions.length} />
       </div>
@@ -89,7 +117,7 @@ export default function DiagnosePage() {
         onBack={
           questionIndex > 0
             ? () => setQuestionIndex(questionIndex - 1)
-            : () => router.push("/role")
+            : () => router.push("/respondent")
         }
         isLast={isLast}
       />

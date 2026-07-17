@@ -1,0 +1,17 @@
+{
+  "viewport": "375x812",
+  "bodyOverflow": {
+    "scrollW": 375,
+    "clientW": 375,
+    "overflow": false
+  },
+  "factorNameTruncationIssues": [],
+  "diagnosisLine": {
+    "chars": 112,
+    "heightPx": 114,
+    "preview": "교육과 도구 도입은 진행 중이나, 「중간관리자 태도·역량」과 「평가·보상 불일치」에서 구조적 마찰이 크게 나타나고 있습니다. 교육·도구 도입 속도와 현장 업무 방식 변화 사이에 뚜"
+  },
+  "sheetVisible": true,
+  "sheetScrollable": true,
+  "actionGridColumns": "343px"
+}

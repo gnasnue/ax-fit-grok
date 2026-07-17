@@ -25,6 +25,15 @@ function labelAxStage(stage: CompanyContext["axStage"]): string {
   );
 }
 
+/**
+ * Embed stage into a sentence without “도입 중 단계에서” style doubling.
+ * e.g. "일부 현업 적용 중인 상황에서" / "아직 시작 전 단계에서"
+ */
+function stageSituation(stageLabel: string): string {
+  if (stageLabel.endsWith("중")) return `${stageLabel}인 상황에서`;
+  return `${stageLabel} 단계에서`;
+}
+
 function labelSize(size: CompanyContext["size"]): string {
   return SIZE_OPTIONS.find((o) => o.value === size)?.label ?? "규모 미입력";
 }
@@ -34,11 +43,14 @@ function labelIndustry(industry: CompanyContext["industry"]): string | null {
   return INDUSTRY_OPTIONS.find((o) => o.value === industry)?.label ?? null;
 }
 
-/** e.g. "제조 중견 기준으로 자주 보는 패턴입니다." — used once in one-liner */
+/**
+ * Short context cue for boardroom — avoid stacking when diagnosis already long.
+ * e.g. "제조 중견에서 자주 보이는 패턴입니다."
+ */
 function industryPatternCue(context: CompanyContext): string | null {
   const ind = labelIndustry(context.industry);
   if (!ind) return null;
-  return `${ind} 중견 기준으로 자주 보는 패턴입니다.`;
+  return `${ind} 중견에서 자주 보이는 패턴입니다.`;
 }
 
 /** Korean particle helpers for natural boardroom copy */
@@ -58,14 +70,26 @@ function iGa(name: string): string {
   return hasBatchim(name) ? "이" : "가";
 }
 
+function eulReul(name: string): string {
+  return hasBatchim(name) ? "을" : "를";
+}
+
 export function intensityBand(score: number): "high" | "mid" | "low" {
   if (score >= 65) return "high";
   if (score >= 40) return "mid";
   return "low";
 }
 
+/** Structural problem sentence for a friction factor (detail panel / map click) */
+export function getFrictionProblemLine(
+  id: FrictionFactorId,
+  score: number,
+): string {
+  return PROBLEM_LINES[id][intensityBand(score)];
+}
+
 /** Spec §7.2 — structural problem lines (severity by severity) */
-const PROBLEM_LINES: Record<
+export const PROBLEM_LINES: Record<
   FrictionFactorId,
   Record<"high" | "mid" | "low", string>
 > = {
@@ -110,105 +134,178 @@ const ROLE_SPLIT = {
   business: "파일럿 업무 선정 및 현장 피드백 제공",
 } as const;
 
-function formatTopPair(friction: FrictionScore[]): {
-  phrase: string;
-  topScore: number;
-} {
+/**
+ * Highlight top friction name(s) in 「」.
+ * - High/mid: pair when #2 is within 85% of #1 (twin priorities)
+ * - Low: always single top — dual 「」 feels over-emphasized when scores are mild
+ */
+function formatTopPhrase(
+  friction: FrictionScore[],
+  mode: "pair" | "single",
+): { phrase: string; topScore: number; lastName: string; isPair: boolean } {
   const top = friction[0];
   const second = friction[1];
   const topName = top?.name ?? "구조적 장벽";
   const topScore = top?.score ?? 0;
 
-  if (second && second.score >= topScore * 0.85) {
+  if (
+    mode === "pair" &&
+    second &&
+    second.score >= topScore * 0.85
+  ) {
     return {
       phrase: `「${topName}」${waGwa(topName)} 「${second.name}」`,
       topScore,
+      lastName: second.name,
+      isPair: true,
     };
   }
-  return { phrase: `「${topName}」`, topScore };
+  return {
+    phrase: `「${topName}」`,
+    topScore,
+    lastName: topName,
+    isPair: false,
+  };
 }
 
 /**
- * Spec §7.1 — one-liner reflects ax_stage + top friction + size + industry,
+ * Prefer the real gap insight line (structure framing) over a generic pace template.
+ * Returns null when no strong gap signal.
+ */
+function gapClause(topGaps: GapInsight[]): string | null {
+  const strong = topGaps.find((g) => g.severity >= 55);
+  if (!strong) return null;
+  // problemLine is already board-ready and system-framed
+  return strong.problemLine;
+}
+
+/** Join clauses without empty parts; max ~2–3 short sentences. */
+function joinClauses(...parts: Array<string | null | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+export type OneLinerOptions = {
+  /** When true, soften certainty and append single-layer caveat */
+  singleLayer?: boolean;
+};
+
+/**
+ * Soften over-confident boardroom phrasing for single-layer results.
+ * Structure framing kept; avoids “전사 확정” tone.
+ */
+function softenSingleLayerTone(text: string): string {
+  let t = text
+    .replace(/크게 나타나고 있습니다/g, "크게 나타나는 것으로 보입니다")
+    .replace(/병목으로 작용하고 있습니다/g, "병목으로 작용하는 것으로 보입니다")
+    .replace(/뚜렷한 간극이 있습니다/g, "간극이 관찰됩니다")
+    .replace(/구조적 장벽이 두드러집니다/g, "구조적 장벽이 두드러져 보입니다")
+    .replace(/정렬할 필요가 있습니다/g, "정렬이 필요해 보입니다")
+    .replace(/흔들릴 수 있습니다/g, "흔들릴 수 있어 보입니다")
+    .replace(/권합니다\./g, "권합니다(추가 레이어 확인 권장).");
+
+  if (!t.includes("단일 레이어") && !t.includes("추가 레이어")) {
+    t = `${t} 단일 레이어 응답 기준이며, 추가 레이어 확인이 필요합니다.`;
+  }
+  return t;
+}
+
+/**
+ * Spec §7.1 — one-liner reflects ax_stage + top friction + size/industry,
  * and surfaces employee–org gap when strong signals exist.
+ *
+ * Boardroom rules:
+ * - Readable aloud to executives without template feel
+ * - 「요인」 used once, sparingly (pair only when both truly top)
+ * - Structure/system framing, never person-blame
+ * - Prefer 2 clauses; avoid base + gap + industry triple stack
+ * - Single-layer: lower certainty (“~로 보입니다”)
  */
 export function buildOrgOneLiner(
   context: CompanyContext,
   friction: FrictionScore[],
   topGaps: GapInsight[] = [],
+  options: OneLinerOptions = {},
 ): string {
   const size = labelSize(context.size);
   const stage = labelAxStage(context.axStage);
   const industryCue = industryPatternCue(context);
-  const { phrase, topScore } = formatTopPair(friction);
-  const band = intensityBand(topScore);
-  const lastName =
-    friction[1] && friction[1].score >= (friction[0]?.score ?? 0) * 0.85
-      ? friction[1].name
-      : (friction[0]?.name ?? "구조적 장벽");
-  const eul = hasBatchim(lastName) ? "을" : "를";
+  const band = intensityBand(friction[0]?.score ?? 0);
+  const { phrase, lastName, isPair } = formatTopPhrase(
+    friction,
+    band === "low" ? "single" : "pair",
+  );
+  const eul = eulReul(lastName);
   const iga = iGa(lastName);
+  // Dual subject → use 가/이 after pair still works (“「A」와 「B」가 …”)
+  const subjectParticle = isPair ? "가" : iga;
+  const objectParticle = isPair ? "를" : eul;
 
-  const strongGap = topGaps.find((g) => g.severity >= 55);
-  const gapSentence = strongGap
-    ? strongGap.severity >= 65
-      ? "회사의 추진 속도와 현장 체감 속도 사이에 뚜렷한 간극이 있습니다."
-      : "회사 추진과 현장 체감 사이에 간극이 관찰됩니다."
-    : null;
+  const gap = gapClause(topGaps);
+  // When gap is present, skip industry tail (prevents 3-sentence template stack)
+  const softTail = gap ? null : industryCue;
+  const sizeOnly = gap ? null : `(${size})`;
 
-  const tail =
-    industryCue ?? `${size} 규모 중견기업에서 자주 관찰되는 패턴입니다.`;
-  const meta = `(${stage} · ${size})`;
+  let result: string;
 
   if (band === "low") {
-    const base = `현재 AX 진행 단계(${stage})에서 전반 마찰은 낮은 편입니다. 상대적으로 ${phrase} 쪽을 가볍게 손보면 실행 안정성을 더 높일 수 있습니다.`;
-    return gapSentence
-      ? `${base} ${gapSentence} ${industryCue ? tail : `(${size})`}`
-      : `${base} ${industryCue ? tail : `(${size})`}`;
-  }
-
-  if (band === "mid") {
-    const base = `${stage} 단계에서 ${phrase} 관련 구조 이슈가 중간 수준으로 관찰됩니다.`;
-    if (gapSentence) {
-      return `${base} ${gapSentence} 교육 확대보다 갭을 줄이는 작은 파일럿을 권합니다. ${industryCue ? tail : meta}`;
+    // Calm, single-factor nudge — no dual 「」, no heavy parentheses
+    const base = joinClauses(
+      `${stageSituation(stage)} 전반 마찰은 낮은 편입니다.`,
+      `상대적으로 ${phrase}${objectParticle} 가볍게 손보면 실행 안정성을 더 높일 수 있습니다.`,
+    );
+    result = joinClauses(base, gap, softTail ?? sizeOnly);
+  } else if (band === "mid") {
+    const base = `${stageSituation(stage)} ${phrase} 관련 구조 이슈가 중간 수준입니다.`;
+    if (gap) {
+      result = joinClauses(
+        base,
+        gap,
+        "교육 확대보다 갭을 줄이는 작은 파일럿을 권합니다.",
+      );
+    } else {
+      result = joinClauses(
+        base,
+        "교육 확대보다 작은 파일럿으로 먼저 손보는 편이 낫습니다.",
+        softTail ?? `(${size})`,
+      );
     }
-    return `${base} 교육 확대보다 해당 영역의 작은 파일럿을 권합니다. ${industryCue ? tail : meta}`;
+  } else {
+    // ── High band ──────────────────────────────────────────────
+    const highCore = ((): string => {
+      switch (context.axStage) {
+        case "not_started":
+          return `AX 초기 국면에서 ${phrase}${objectParticle} 중심으로 구조적 장벽을 먼저 정렬할 필요가 있습니다.`;
+        case "education_tools":
+          return `교육과 도구 도입은 진행 중이나, ${phrase}에서 구조적 마찰이 크게 나타나고 있습니다.`;
+        case "partial_apply":
+          return `일부 현업 적용 단계이나 ${phrase}${subjectParticle} 확산의 병목으로 작용하고 있습니다.`;
+        case "enterprise_rollout":
+          return `전사 확산 시도 중에도 ${phrase} 등 구조 이슈가 남아 실행 일관성이 흔들릴 수 있습니다.`;
+        default:
+          return `진단 결과 ${phrase}에서 구조적 장벽이 두드러집니다.`;
+      }
+    })();
+
+    result = joinClauses(
+      highCore,
+      gap,
+      softTail ?? (gap ? null : `(${stage} · ${size})`),
+    );
   }
 
-  // High band — gap-first framing when available
-  if (gapSentence) {
-    const highWithGap: Record<AxStage, string> = {
-      not_started: `AX 초기 국면에서 ${phrase}${eul} 중심으로 구조적 장벽이 보입니다. ${gapSentence} ${industryCue ? tail : meta}`,
-      education_tools: `교육과 도구 도입은 진행 중이나, ${phrase} 쪽 구조 마찰이 큽니다. ${gapSentence} ${tail}`,
-      partial_apply: `일부 현업 적용 단계이나 ${phrase}${iga} 확산 병목입니다. ${gapSentence} ${industryCue ? tail : meta}`,
-      enterprise_rollout: `전사 확산 시도 중에도 ${phrase} 등 구조 이슈가 남습니다. ${gapSentence} ${industryCue ? tail : `(${size})`}`,
-    };
-    if (context.axStage && highWithGap[context.axStage]) {
-      return highWithGap[context.axStage];
-    }
-    return `진단 결과 ${phrase} 쪽 구조적 장벽이 두드러집니다. ${gapSentence} ${industryCue ? tail : meta}`;
+  if (options.singleLayer) {
+    return softenSingleLayerTone(result);
   }
-
-  const highByStage: Record<AxStage, string> = {
-    not_started: `AX 초기 국면에서 ${phrase}${eul} 중심으로 구조적 장벽을 먼저 정렬할 필요가 있습니다. ${industryCue ? tail : meta}`,
-    education_tools: `교육과 도구 도입은 진행 중이나, ${phrase}에서 구조적 마찰이 크게 나타나고 있습니다. ${tail}`,
-    partial_apply: `일부 현업 적용 단계이나 ${phrase}${iga} 확산의 병목으로 작용하고 있습니다. ${industryCue ? tail : meta}`,
-    enterprise_rollout: `전사 확산 시도 중에도 ${phrase} 등 구조 이슈가 남아 실행 일관성이 흔들릴 수 있습니다. ${industryCue ? tail : `(${size})`}`,
-  };
-
-  if (context.axStage && highByStage[context.axStage]) {
-    return highByStage[context.axStage];
-  }
-  return `진단 결과 ${phrase} 쪽 구조적 장벽이 두드러집니다. ${industryCue ? tail : meta}`;
+  return result;
 }
 
-/** Single-layer org result disclaimer */
+/** Single-layer org result disclaimer — null when 2+ layers */
 export function buildLayerDisclaimer(
   layersUsed: RoleLayer[],
 ): string | null {
   if (layersUsed.length !== 1) return null;
   const label = ROLE_LABELS[layersUsed[0]];
-  return `본 결과는 ${label} 레이어 응답 중심이며, 전사 일반화 전 3개 레이어 추가 수집을 권장합니다.`;
+  return `현재 1개 레이어(${label}) 응답 기준입니다. 조직 결과 일반화 전 경영진·팀장·실무자 레이어를 추가로 수집하는 것을 권장합니다. 아래 점수·문장은 참고 신호로 해석해 주세요.`;
 }
 
 export function buildExecutiveReport(
@@ -216,6 +313,7 @@ export function buildExecutiveReport(
   friction: FrictionScore[],
   priorities: PriorityCard[],
   topGaps: GapInsight[] = [],
+  options: OneLinerOptions = {},
 ): ExecutiveReport {
   const top3 = friction.slice(0, 3);
   const topScore = friction[0]?.score ?? 0;
@@ -225,7 +323,13 @@ export function buildExecutiveReport(
   const gapProblems = topGaps
     .filter((g) => g.severity >= 40)
     .slice(0, 2)
-    .map((g) => g.problemLine);
+    .map((g) => {
+      const line = g.problemLine;
+      if (!options.singleLayer) return line;
+      return line
+        .replace(/뚜렷한 간극이 있습니다/g, "간극이 관찰됩니다")
+        .replace(/있습니다\.$/g, "보입니다.");
+    });
 
   const frictionProblems = top3.map((f) => {
     const line = PROBLEM_LINES[f.id][intensityBand(f.score)];
@@ -241,6 +345,12 @@ export function buildExecutiveReport(
     structuralProblems.push(p);
   }
 
+  if (options.singleLayer && structuralProblems.length > 0) {
+    structuralProblems.push(
+      "단일 레이어 응답 기준이므로, 다른 역할 레이어를 추가 수집한 뒤 해석을 확정하는 것이 안전합니다.",
+    );
+  }
+
   const next30Days = priorities.slice(0, 3).flatMap((p, i) => {
     const actions = getActionsForFriction(p.frictionId, "executive");
     return actions.slice(0, 1).map((a, j) => ({
@@ -251,7 +361,7 @@ export function buildExecutiveReport(
   });
 
   return {
-    headline: buildOrgOneLiner(context, friction, topGaps),
+    headline: buildOrgOneLiner(context, friction, topGaps, options),
     structuralProblems,
     recommendation: RECOMMENDATION[band],
     roleSplit: { ...ROLE_SPLIT },
